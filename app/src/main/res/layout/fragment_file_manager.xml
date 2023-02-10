@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".view.files.FileManagerFragment">
+
+    <!--    The quick access panel    -->
+    <!--    <TextView-->
+    <!--        android:id="@+id/tvQuickAccess"-->
+    <!--        android:layout_width="wrap_content"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:text="@string/quick_access"-->
+    <!--        android:textColor="@color/text_primary"-->
+    <!--        app:layout_constraintStart_toStartOf="@id/marginStart"-->
+    <!--        app:layout_constraintTop_toTopOf="@id/marginTop" />-->
+
+    <!--    <androidx.recyclerview.widget.RecyclerView-->
+    <!--        android:id="@+id/rvDownloads"-->
+    <!--        android:layout_width="0dp"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:layout_marginTop="10dp"-->
+    <!--        android:orientation="horizontal"-->
+    <!--        app:layout_constraintEnd_toEndOf="@id/marginEnd"-->
+    <!--        app:layout_constraintStart_toStartOf="@id/marginStart"-->
+    <!--        app:layout_constraintTop_toBottomOf="@id/tvQuickAccess" />-->
+
+    <TextView
+        android:id="@+id/tvStorage"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:text="@string/storage"
+        android:textColor="@color/text_primary"
+        app:layout_constraintEnd_toStartOf="@+id/marginEnd"
+        app:layout_constraintStart_toStartOf="@id/marginStart"
+        app:layout_constraintTop_toTopOf="@id/marginTop" />
+
+    <TextView
+        android:id="@+id/tvIntSto"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_tab"
+        android:backgroundTint="@color/tab_bg1"
+        android:gravity="center"
+        android:padding="14dp"
+        android:text="@string/internal_storage"
+        android:textColor="@color/background_main"
+        android:visibility="gone"
+        app:layout_constraintEnd_toStartOf="@id/tvExtSto"
+        app:layout_constraintStart_toStartOf="@id/marginStart"
+        app:layout_constraintTop_toBottomOf="@id/tvStorage"
+        app:layout_constraintVertical_chainStyle="spread" />
+
+    <TextView
+        android:id="@+id/tvExtSto"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_tab"
+        android:backgroundTint="@color/tab_bg2"
+        android:gravity="center"
+        android:padding="14dp"
+        android:text="@string/internal_storage"
+        android:textColor="@color/text_primary"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@id/marginEnd"
+        app:layout_constraintStart_toEndOf="@id/tvIntSto"
+        app:layout_constraintTop_toTopOf="@id/tvIntSto" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvFileMgr"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="15dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/marginEnd"
+        app:layout_constraintStart_toStartOf="@id/marginStart"
+        app:layout_constraintTop_toBottomOf="@id/tvIntSto" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/marginStart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent=".04" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/marginEnd"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent=".96" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/marginTop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent=".015" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

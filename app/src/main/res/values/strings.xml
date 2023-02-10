@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">SyncPlay</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="join_meeting">Join a meeting via code</string>
+    <string name="enter_invite_code">Enter invite code…</string>
+    <string name="recent">Recent</string>
+    <string name="library">Library</string>
+    <string name="quick_access">Quick access</string>
+    <string name="storage">Storage</string>
+    <string name="internal_storage">Internal Storage</string>
+    <string name="sample_movie_name_ext">Sample movie name.ext</string>
+    <string name="people_watching">%s watching</string>
+    <string name="invite">Invite</string>
+    <string name="chat">Chat</string>
+    <string name="type_something">Type something…</string>
+    <string name="s_said">%s said:</string>
+    <string name="video_in_room">Video being played in the room is: %s. Please select it.</string>
+    <string name="join">Join</string>
+</resources>
