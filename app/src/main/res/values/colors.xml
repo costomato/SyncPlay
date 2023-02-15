@@ -10,6 +10,7 @@
 
     <!--    app colors     -->
     <color name="background_main">#FFFFFF</color>
+    <color name="background_dialog">#E3D7D7</color>
     <color name="icon_shade">#55225D</color>
     <color name="text_primary">#000000</color>
     <color name="input_hint">#80000000</color>

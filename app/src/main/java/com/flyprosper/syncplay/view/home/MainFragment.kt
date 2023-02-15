@@ -22,6 +22,7 @@ import com.flyprosper.syncplay.model.Video
 import com.flyprosper.syncplay.network.model.MessageData
 import com.flyprosper.syncplay.viewmodel.SocketViewModel
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
@@ -37,6 +38,8 @@ class MainFragment : Fragment() {
     private lateinit var socketViewModel: SocketViewModel
     private lateinit var progressDialog: ProgressDialog
 
+    private var socketResponseJob: Job? = null
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -50,7 +53,6 @@ class MainFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 //        Do work here
-        Log.e("MainFrag", "Saved state is null = ${savedInstanceState == null}")
         if (savedInstanceState == null) {
             init(view)
             loadVideos()
@@ -99,33 +101,49 @@ class MainFragment : Fragment() {
 
         videoAdapter = VideoAdapter(object : VideoAdapter.OnVideoClickListener {
             override fun onVideoClick(videoFile: Video) {
-                progressDialog.show()
-                val messageData = MessageData(
-                    channel = "create-room",
-                    message = videoFile.title,
-                    appVersion = BuildConfig.VERSION_NAME,
-                    info = videoFile.duration
-                )
-                socketViewModel.videoInRoom = videoFile
-                socketViewModel.sendData(messageData)
+                if (socketViewModel.socketResult) {
+                    progressDialog.show()
+                    val messageData = MessageData(
+                        channel = "create-room",
+                        message = videoFile.title,
+                        appVersion = BuildConfig.VERSION_NAME,
+                        info = videoFile.duration
+                    )
+                    socketViewModel.videoInRoom = videoFile
+                    socketViewModel.sendData(messageData)
+                } else
+                    Snackbar.make(
+                        binding.root,
+                        getString(R.string.please_wait_socket),
+                        Snackbar.LENGTH_SHORT
+                    )
+                        .show()
             }
         })
         rvLibrary.adapter = videoAdapter
 
 //        send join room request
         binding.tvJoinRoom.setOnClickListener {
-            val roomCode = binding.inputJoinCode.editText?.text?.trim().toString()
-            if (roomCode.isNotEmpty()) {
-                progressDialog.show()
-                socketViewModel.sendData(
-                    MessageData(
-                        channel = "join-room",
-                        roomCode = roomCode,
-                        message = "Wanna join",
-                        appVersion = BuildConfig.VERSION_NAME
+            if (socketViewModel.socketResult) {
+                val roomCode = binding.inputJoinCode.editText?.text?.trim().toString()
+                if (roomCode.isNotEmpty()) {
+                    progressDialog.show()
+                    socketViewModel.sendData(
+                        MessageData(
+                            channel = "join-room",
+                            roomCode = roomCode,
+                            message = "Wanna join",
+                            appVersion = BuildConfig.VERSION_NAME
+                        )
                     )
+                }
+            } else
+                Snackbar.make(
+                    binding.root,
+                    getString(R.string.please_wait_socket),
+                    Snackbar.LENGTH_SHORT
                 )
-            }
+                    .show()
         }
     }
 
@@ -151,8 +169,62 @@ class MainFragment : Fragment() {
         socketViewModel = (activity as HomeActivity).socketViewModel
         Log.e("initSocket", "video: ${socketViewModel.videoInRoom}")
 
+        socketResponseJob = lifecycleScope.launch {
+            socketViewModel.dataRes.collect { data ->
+                Log.e("MainFragment", "Data incoming: $data")
+                if (this@MainFragment.isVisible)
+                    when (data.channel) {
+                        "create-room" -> {
+                            socketViewModel.myName = data.user?.name ?: "Me"
+                            socketViewModel.nUsers = data.nUsers ?: 0
+                            socketViewModel.roomCode = data.roomCode
+                            socketViewModel.amICreator = true
+                            progressDialog.dismiss()
 
-        lifecycleScope.launch {
+//                            ((activity as HomeActivity).supportFragmentManager.findFragmentById(R.id.fragmentContainerView) as NavHostFragment)
+//                                .navController.navigate(R.id.action_mainFragment_to_playerFragment)
+                            Navigation.findNavController(view)
+                                .navigate(R.id.action_mainFragment_to_playerFragment)
+                        }
+                        "join-room" -> {
+                            progressDialog.dismiss()
+                            if (data.err == true) {
+                                Snackbar.make(binding.root, data.message, Snackbar.LENGTH_LONG)
+                                    .show()
+                            } else {
+                                socketViewModel.videoInRoom = Video(
+                                    0, title = data.message,
+                                    duration = data.info,
+                                    path = "",
+                                    isPlaying = data.isVideoPlaying,
+                                    currentTime = data.currentTime
+                                )
+                                socketViewModel.myName = data.user?.name ?: "Me"
+                                socketViewModel.nUsers = data.nUsers ?: 0
+                                socketViewModel.roomCode = data.roomCode
+
+
+                                ((activity as HomeActivity).supportFragmentManager.findFragmentById(
+                                    R.id.fragmentContainerView
+                                ) as NavHostFragment)
+                                    .navController.navigate(R.id.action_mainFragment_to_fileManagerFragment)
+
+//                            Navigation.findNavController(view)
+//                                .navigate(R.id.action_mainFragment_to_fileManagerFragment)
+
+                            }
+                        }
+                        "error" -> {
+                            Log.e("SocketViewModel", "$data")
+                        }
+                        else -> {
+                            Log.e("MainFragment", "Invalid channel data=$data")
+                        }
+                    }
+            }
+        }
+
+        /*lifecycleScope.launchWhenCreated {
             socketViewModel.dataRes.collect { data ->
                 Log.e("MainFragment", "Data incoming: $data")
                 if (socketViewModel.myName == "Me" && this@MainFragment.isVisible) {
@@ -198,7 +270,7 @@ class MainFragment : Fragment() {
                     }
                 }
             }
-        }
+        }*/
     }
 
     private fun convertMillisToTimeFormat(millis: Long): String {
@@ -212,5 +284,6 @@ class MainFragment : Fragment() {
         super.onDestroyView()
         cursor?.close()
         _binding = null
+        socketResponseJob?.cancel()
     }
 }

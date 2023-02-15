@@ -15,8 +15,9 @@
     </style>
 
     <style name="CustomAlertDialog" parent="@android:style/Theme.Dialog">
-        <item name="android:textColor">@color/text_primary</item>
+        <item name="titleTextColor">@color/text_primary</item>
+        <item name="colorAccent">@color/text_primary</item>
         <item name="background">@drawable/bg_tab</item>
-        <item name="backgroundTint">@color/background_main</item>
+        <item name="backgroundTint">@color/background_dialog</item>
     </style>
 </resources>

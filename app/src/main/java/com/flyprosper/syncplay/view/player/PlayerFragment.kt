@@ -25,6 +25,8 @@ import com.flyprosper.syncplay.view.custom.CustomVideoView
 import com.flyprosper.syncplay.view.home.HomeActivity
 import com.flyprosper.syncplay.viewmodel.SocketViewModel
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 class PlayerFragment : Fragment() {
 
@@ -32,6 +34,8 @@ class PlayerFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var socketViewModel: SocketViewModel
+
+    private var socketResponseJob: Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -150,7 +154,6 @@ class PlayerFragment : Fragment() {
                         )
                     )
                 }
-                socketViewModel.intendVideoAction = true
             }
 
             override fun onResume() {
@@ -167,7 +170,6 @@ class PlayerFragment : Fragment() {
                         )
                     )
                 }
-                socketViewModel.intendVideoAction = true
             }
 
             override fun onPlay() {
@@ -187,7 +189,6 @@ class PlayerFragment : Fragment() {
                         )
                     )
                 }
-                socketViewModel.intendVideoAction = true
             }
 
             override fun onSeekComplete(millis: Int) {
@@ -207,7 +208,6 @@ class PlayerFragment : Fragment() {
                         )
                     )
                 }
-                socketViewModel.intendVideoAction = true
             }
         })
 
@@ -218,6 +218,7 @@ class PlayerFragment : Fragment() {
                 binding.videoPlayer.seekTo(socketViewModel.videoInRoom?.currentTime ?: 0)
                 binding.videoPlayer.start()
             }
+            socketViewModel.intendVideoAction = true
         }
 
 
@@ -239,7 +240,7 @@ class PlayerFragment : Fragment() {
     }
 
     private fun initSocket() {
-        lifecycleScope.launchWhenStarted {
+        socketResponseJob = viewLifecycleOwner.lifecycleScope.launch {
             socketViewModel.dataRes.collect { data ->
                 when (data.channel) {
                     "join-room" -> {
@@ -248,6 +249,7 @@ class PlayerFragment : Fragment() {
                             getString(R.string.people_watching, "${socketViewModel.nUsers}")
 
                         socketViewModel.intendVideoAction = false
+
                         binding.videoPlayer.pause()
                         socketViewModel.sendData(
                             MessageData(
@@ -259,6 +261,8 @@ class PlayerFragment : Fragment() {
                                 currentTime = binding.videoPlayer.currentPosition
                             )
                         )
+
+                        socketViewModel.intendVideoAction = true
                     }
                     "media-sync" -> {
                         socketViewModel.videoInRoom = Video(
@@ -301,6 +305,7 @@ class PlayerFragment : Fragment() {
                                         binding.videoPlayer.pause()
                                 }
                             }
+                            socketViewModel.intendVideoAction = true
                         }
                     }
                     "chat" -> {
@@ -329,20 +334,23 @@ class PlayerFragment : Fragment() {
     }
 
     override fun onPause() {
+        super.onPause()
         socketViewModel.intendVideoAction = false
         socketViewModel.videoInRoom?.currentTime = binding.videoPlayer.currentPosition
         binding.videoPlayer.pause()
-        super.onPause()
+        socketViewModel.intendVideoAction = true
     }
 
     override fun onResume() {
         super.onResume()
         socketViewModel.intendVideoAction = false
         socketViewModel.videoInRoom?.currentTime?.let { binding.videoPlayer.seekTo(it) }
+        socketViewModel.intendVideoAction = true
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+        socketResponseJob?.cancel()
     }
 }

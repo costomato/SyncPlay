@@ -82,7 +82,7 @@
         android:layout_height="0dp"
         android:layout_margin="6dp"
         android:background="@drawable/bg_tab"
-        android:backgroundTint="@color/icon_tint"
+        android:backgroundTint="@color/tab_bg1"
         android:gravity="center"
         android:text="@string/join"
         android:textColor="@color/background_main"

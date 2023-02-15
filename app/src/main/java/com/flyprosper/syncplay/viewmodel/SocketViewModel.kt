@@ -21,6 +21,8 @@ class SocketViewModel(private val socketService: SocketService) : ViewModel() {
     private val _dataRes = Channel<MessageData>(Channel.BUFFERED)
     val dataRes = _dataRes.receiveAsFlow()
 
+    var socketResult = false
+
     var myName = "Me"
     var roomCode: String? = null
     var videoInRoom: Video? = null
@@ -29,13 +31,13 @@ class SocketViewModel(private val socketService: SocketService) : ViewModel() {
 
     lateinit var chatAdapter: ChatAdapter
     val chats: Stack<MessageData> by lazy { Stack() }
-    var intendVideoAction = true
+    var intendVideoAction = false
 
     fun initSession() {
         viewModelScope.launch {
-            val result = socketService.initSession()
-            Log.e("initSession", "Socket active: $result")
-            if (result) {
+            socketResult = socketService.initSession()
+            Log.e("initSession", "Socket active: $socketResult")
+            if (socketResult) {
                 socketService.observeSocket()
 //                    .onEach { data ->
 //                        Log.e("observeSocket", "Something received: $data")
@@ -51,7 +53,7 @@ class SocketViewModel(private val socketService: SocketService) : ViewModel() {
                         )
                     }
                     .collect {
-                        Log.e("observeSocket", "Something received: $it")
+                        Log.e("SVMObserveSocket", "Something received: $it")
                         _dataRes.send(it)
                     }
             } else {

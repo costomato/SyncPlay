@@ -26,12 +26,12 @@ class ProgressDialog(context: Context) {
         _dialog = Dialog(context)
         val progressBar = ProgressBar(context)
         progressBar.indeterminateTintList =
-            AppCompatResources.getColorStateList(context, R.color.background_main)
+            AppCompatResources.getColorStateList(context, R.color.icon_tint)
         dialog?.setContentView(progressBar)
         val r = 24f
         val p = 20
         val shape = ShapeDrawable(RoundRectShape(floatArrayOf(r, r, r, r, r, r, r, r), null, null))
-        shape.paint.color = ContextCompat.getColor(context, R.color.text_primary)
+        shape.paint.color = ContextCompat.getColor(context, R.color.background_dialog)
         shape.setPadding(p, p, p, p)
 
         dialog?.window?.setBackgroundDrawable(shape)

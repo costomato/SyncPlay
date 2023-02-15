@@ -6,6 +6,7 @@ Syncplay is an android app that allows friends to watch videos or movies togethe
 - Synchronized video playback with friends in real-time
 - Pure Kotlin in the frontend with a Ktor backend
 - Uses websockets to connect clients
+- MVVM architecture (I made this app in a hurry, so the code is not very clean)
 
 ## Getting started
 1. Download the app from the Google Play Store (coming soon)
@@ -24,4 +25,4 @@ If you are interested in contributing to this project, we welcome all types of c
 To contribute, simply fork this repository and make a pull request with your changes. We will review your changes and merge them into the main branch if they are deemed appropriate.
 
 ## Acknowledgments
-- (Suyious)[https://github.com/Suyious] for the amazing design work on the app.
+- [Suyious](https://github.com/Suyious) for the amazing design work on the app.

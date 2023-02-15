@@ -17,4 +17,5 @@
     <string name="s_said">%s said:</string>
     <string name="video_in_room">Video being played in the room is: %s. Please select it.</string>
     <string name="join">Join</string>
+    <string name="please_wait_socket">Please wait for the socket to initialize</string>
 </resources>

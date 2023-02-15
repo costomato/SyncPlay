@@ -26,6 +26,7 @@ import com.flyprosper.syncplay.utils.VideoFileManager
 import com.flyprosper.syncplay.view.home.HomeActivity
 import com.flyprosper.syncplay.viewmodel.SocketViewModel
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -42,6 +43,8 @@ class FileManagerFragment : Fragment() {
     private lateinit var fileManagerAdapter: FileManagerAdapter
 
     private lateinit var videoDirs: List<VideoDirectory>
+
+    private var socketResponseJob: Job? = null
 
     // Not really required in this case as i am not going to deal with subdirectories.
     // Just using the stack rule as a practice
@@ -91,21 +94,33 @@ class FileManagerFragment : Fragment() {
 
                     val duration = file.path.getVideoDuration()
                     if (socketViewModel.videoInRoom == null) {
-                        val messageData = MessageData(
-                            channel = "create-room",
-                            message = file.name,
-                            appVersion = BuildConfig.VERSION_NAME,
-                            info = duration
-                        )
-                        socketViewModel.videoInRoom = Video(
-                            0, file.name,
-                            duration, file.path
-                        )
-                        socketViewModel.sendData(messageData)
+                        if (socketViewModel.socketResult) {
+                            val messageData = MessageData(
+                                channel = "create-room",
+                                message = file.name,
+                                appVersion = BuildConfig.VERSION_NAME,
+                                info = duration
+                            )
+                            socketViewModel.videoInRoom = Video(
+                                0, file.name,
+                                duration, file.path
+                            )
+                            socketViewModel.sendData(messageData)
+                        } else
+                            Snackbar.make(
+                                binding.root,
+                                getString(R.string.please_wait_socket),
+                                Snackbar.LENGTH_SHORT
+                            )
+                                .show()
                     } else {
+                        progressDialog.dismiss()
+
                         if (duration != socketViewModel.videoInRoom?.duration || file.name != socketViewModel.videoInRoom?.title) {
                             val customAlertDialog = CustomAlertDialog()
                             val builder = customAlertDialog.builder(
+                                "Sure you wanna continue?",
+                                "The duration or title of selected video does not match the one in the room. Continue?",
                                 requireContext(),
                                 object : CustomAlertDialog.OnChoiceClickListener {
                                     override fun onPositiveClick() {
@@ -115,8 +130,6 @@ class FileManagerFragment : Fragment() {
                                             .navigate(R.id.action_fileManagerFragment_to_playerFragment)
                                     }
                                 })
-                                .setTitle("Sure you wanna continue?")
-                                .setMessage("The duration or title of selected video does not match the one in the room. Continue?")
                             customAlertDialog.createDialog(builder)
                                 .show()
                         } else {
@@ -158,35 +171,33 @@ class FileManagerFragment : Fragment() {
         socketViewModel = (activity as HomeActivity).socketViewModel
         Log.e("FmFragment", "svm video: ${socketViewModel.videoInRoom}")
 
-
         if (socketViewModel.videoInRoom == null) {
-            lifecycleScope.launch {
+            socketResponseJob = viewLifecycleOwner.lifecycleScope.launch {
                 socketViewModel.dataRes.collect { data ->
                     Log.e("FmFragment", "Received data: $data")
-                    if (socketViewModel.myName == "Me" && this@FileManagerFragment.isVisible) {
-                        when (data.channel) {
-                            "create-room" -> {
-                                progressDialog.dismiss()
+                    when (data.channel) {
+                        "create-room" -> {
+                            progressDialog.dismiss()
 
-                                if (data.err == true) {
-                                    Snackbar.make(binding.root, data.message, Snackbar.LENGTH_LONG)
-                                        .show()
-                                } else{
-                                    socketViewModel.myName = data.user?.name ?: "Me"
-                                    socketViewModel.nUsers = data.nUsers ?: 0
-                                    socketViewModel.roomCode = data.roomCode
-                                    socketViewModel.amICreator = true
-                                    Navigation.findNavController(view)
-                                        .navigate(R.id.action_fileManagerFragment_to_playerFragment)
-                                }
-                            }
-                            "error" -> {
-                                Log.e("FileManagerFrag", "$data")
-                            }
-                            else -> {
-                                Log.e("FileManagerFrag", "Invalid channel data=$data")
+                            if (data.err == true) {
+                                Snackbar.make(binding.root, data.message, Snackbar.LENGTH_LONG)
+                                    .show()
+                            } else {
+                                socketViewModel.myName = data.user?.name ?: "Me"
+                                socketViewModel.nUsers = data.nUsers ?: 0
+                                socketViewModel.roomCode = data.roomCode
+                                socketViewModel.amICreator = true
+                                Navigation.findNavController(view)
+                                    .navigate(R.id.action_fileManagerFragment_to_playerFragment)
                             }
                         }
+                        "error" -> {
+                            Log.e("FileManagerFrag", "$data")
+                        }
+                        else -> {
+                            Log.e("FileManagerFrag", "Invalid channel data=$data")
+                        }
+
                     }
                 }
             }
@@ -212,5 +223,6 @@ class FileManagerFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+        socketResponseJob?.cancel()
     }
 }
