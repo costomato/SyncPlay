@@ -19,7 +19,7 @@ class SocketServiceImpl(private val client: HttpClient) : SocketService {
         return try {
             socket = client.webSocketSession {
                 url("wss://syncplay-backend.onrender.com/ws")
-//                url("ws://192.168.0.105:8080/ws")
+//                url("ws://192.168.0.112:8080/ws")
             }
             socket?.isActive == true
         } catch (e: Exception) {

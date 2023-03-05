@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.Navigation
+import androidx.navigation.fragment.NavHostFragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.flyprosper.syncplay.BuildConfig
@@ -25,9 +26,10 @@ import com.flyprosper.syncplay.network.model.MessageData
 import com.flyprosper.syncplay.utils.VideoFileManager
 import com.flyprosper.syncplay.view.home.HomeActivity
 import com.flyprosper.syncplay.viewmodel.SocketViewModel
+import com.google.android.gms.ads.AdRequest
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -65,13 +67,14 @@ class FileManagerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 //        Do work here
-        if (savedInstanceState == null) {
-            init(view)
-            initSocket(view)
-        }
+        init()
+        initSocket(view)
     }
 
-    private fun init(view: View) {
+    private fun init() {
+//        initialize adview
+        binding.bannerAd.loadAd(AdRequest.Builder().build())
+
         progressDialog = ProgressDialog(requireContext())
 
         rvFileMgr = binding.rvFileMgr
@@ -108,7 +111,7 @@ class FileManagerFragment : Fragment() {
                             socketViewModel.sendData(messageData)
                         } else
                             Snackbar.make(
-                                binding.root,
+                                binding.bannerAd,
                                 getString(R.string.please_wait_socket),
                                 Snackbar.LENGTH_SHORT
                             )
@@ -124,18 +127,35 @@ class FileManagerFragment : Fragment() {
                                 requireContext(),
                                 object : CustomAlertDialog.OnChoiceClickListener {
                                     override fun onPositiveClick() {
-                                        socketViewModel.videoInRoom =
-                                            Video(0, file.name, duration, file.path)
-                                        Navigation.findNavController(view)
-                                            .navigate(R.id.action_fileManagerFragment_to_playerFragment)
+                                        socketViewModel.videoInRoom = Video(
+                                            id = 0,
+                                            title = file.name, duration = duration, path = file.path
+                                        )
+                                        socketViewModel.sendData(
+                                            MessageData(
+                                                channel = "join-room",
+                                                roomCode = socketViewModel.roomCode,
+                                                message = "Wanna join",
+                                                appVersion = BuildConfig.VERSION_NAME
+                                            )
+                                        )
                                     }
                                 })
                             customAlertDialog.createDialog(builder)
                                 .show()
                         } else {
-                            socketViewModel.videoInRoom = Video(0, file.name, duration, file.path)
-                            Navigation.findNavController(view)
-                                .navigate(R.id.action_fileManagerFragment_to_playerFragment)
+                            socketViewModel.videoInRoom = Video(
+                                id = 0,
+                                title = file.name, duration = duration, path = file.path
+                            )
+                            socketViewModel.sendData(
+                                MessageData(
+                                    channel = "join-room",
+                                    roomCode = socketViewModel.roomCode,
+                                    message = "Wanna join",
+                                    appVersion = BuildConfig.VERSION_NAME
+                                )
+                            )
                         }
                     }
                 }
@@ -171,37 +191,54 @@ class FileManagerFragment : Fragment() {
         socketViewModel = (activity as HomeActivity).socketViewModel
         Log.e("FmFragment", "svm video: ${socketViewModel.videoInRoom}")
 
-        if (socketViewModel.videoInRoom == null) {
-            socketResponseJob = viewLifecycleOwner.lifecycleScope.launch {
-                socketViewModel.dataRes.collect { data ->
-                    Log.e("FmFragment", "Received data: $data")
-                    when (data.channel) {
-                        "create-room" -> {
-                            progressDialog.dismiss()
+        socketResponseJob = viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            socketViewModel.dataRes.collectLatest { data ->
+                Log.e("FmFragment", "Received data: $data")
+                when (data.channel) {
+                    "create-room" -> {
+                        progressDialog.dismiss()
 
-                            if (data.err == true) {
-                                Snackbar.make(binding.root, data.message, Snackbar.LENGTH_LONG)
-                                    .show()
-                            } else {
-                                socketViewModel.myName = data.user?.name ?: "Me"
-                                socketViewModel.nUsers = data.nUsers ?: 0
-                                socketViewModel.roomCode = data.roomCode
-                                socketViewModel.amICreator = true
-                                Navigation.findNavController(view)
-                                    .navigate(R.id.action_fileManagerFragment_to_playerFragment)
-                            }
+                        if (data.err == true) {
+                            Snackbar.make(binding.bannerAd, data.message, Snackbar.LENGTH_LONG)
+                                .show()
+                        } else {
+                            socketViewModel.myName = data.user?.name ?: "Me"
+                            socketViewModel.nUsers = data.nUsers ?: 0
+                            socketViewModel.roomCode = data.roomCode
+                            socketViewModel.amICreator = true
+                            Navigation.findNavController(view)
+                                .navigate(R.id.action_fileManagerFragment_to_playerFragment)
                         }
-                        "error" -> {
-                            Log.e("FileManagerFrag", "$data")
-                        }
-                        else -> {
-                            Log.e("FileManagerFrag", "Invalid channel data=$data")
-                        }
+                    }
+                    "join-room" -> {
+                        progressDialog.dismiss()
+                        if (data.err == true) {
+                            Snackbar.make(binding.bannerAd, data.message, Snackbar.LENGTH_LONG)
+                                .show()
+                        } else {
+                            // just in case...
+                            socketViewModel.videoInRoom?.isPlaying = data.isVideoPlaying
+                            socketViewModel.videoInRoom?.currentTime = data.currentTime
+                            socketViewModel.myName = data.user?.name ?: "Me"
+                            socketViewModel.nUsers = data.nUsers ?: 0
+                            socketViewModel.roomCode = data.roomCode
 
+                            ((activity as HomeActivity).supportFragmentManager.findFragmentById(
+                                R.id.fragmentContainerView
+                            ) as NavHostFragment)
+                                .navController.navigate(R.id.action_fileManagerFragment_to_playerFragment)
+                        }
+                    }
+                    "error" -> {
+                        Log.e("FileManagerFrag", "$data")
+                    }
+                    else -> {
+                        Log.e("FileManagerFrag", "Invalid channel data=$data")
                     }
                 }
             }
-        } else {
+        }
+        if (socketViewModel.videoInRoom != null) {
             binding.tvStorage.text =
                 getString(R.string.video_in_room, "${socketViewModel.videoInRoom?.title}")
         }
@@ -223,6 +260,8 @@ class FileManagerFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+        Log.e("FMFrag onDestroyView", "Destroying")
         socketResponseJob?.cancel()
+        socketResponseJob = null
     }
 }

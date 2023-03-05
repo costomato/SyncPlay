@@ -21,9 +21,10 @@ import com.flyprosper.syncplay.dialogs.ProgressDialog
 import com.flyprosper.syncplay.model.Video
 import com.flyprosper.syncplay.network.model.MessageData
 import com.flyprosper.syncplay.viewmodel.SocketViewModel
+import com.google.android.gms.ads.AdRequest
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
 import java.util.concurrent.TimeUnit
 
 class MainFragment : Fragment() {
@@ -53,15 +54,16 @@ class MainFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 //        Do work here
-        if (savedInstanceState == null) {
-            init(view)
-            loadVideos()
+        init(view)
+        loadVideos()
 
-            initSocket(view)
-        }
+        initSocket(view)
     }
 
     private fun init(view: View) {
+//        initialize adview
+        binding.bannerAd.loadAd(AdRequest.Builder().build())
+
         progressDialog = ProgressDialog(requireContext())
 
         binding.ivOpenFileManager.setOnClickListener {
@@ -113,7 +115,7 @@ class MainFragment : Fragment() {
                     socketViewModel.sendData(messageData)
                 } else
                     Snackbar.make(
-                        binding.root,
+                        binding.bannerAd,
                         getString(R.string.please_wait_socket),
                         Snackbar.LENGTH_SHORT
                     )
@@ -130,7 +132,7 @@ class MainFragment : Fragment() {
                     progressDialog.show()
                     socketViewModel.sendData(
                         MessageData(
-                            channel = "join-room",
+                            channel = "get-room",
                             roomCode = roomCode,
                             message = "Wanna join",
                             appVersion = BuildConfig.VERSION_NAME
@@ -139,7 +141,7 @@ class MainFragment : Fragment() {
                 }
             } else
                 Snackbar.make(
-                    binding.root,
+                    binding.bannerAd,
                     getString(R.string.please_wait_socket),
                     Snackbar.LENGTH_SHORT
                 )
@@ -169,10 +171,10 @@ class MainFragment : Fragment() {
         socketViewModel = (activity as HomeActivity).socketViewModel
         Log.e("initSocket", "video: ${socketViewModel.videoInRoom}")
 
-        socketResponseJob = lifecycleScope.launch {
-            socketViewModel.dataRes.collect { data ->
+        socketResponseJob = lifecycleScope.launchWhenStarted {
+            socketViewModel.dataRes.collectLatest { data ->
                 Log.e("MainFragment", "Data incoming: $data")
-                if (this@MainFragment.isVisible)
+                if (this@MainFragment.isVisible && socketViewModel.myName == "Me")
                     when (data.channel) {
                         "create-room" -> {
                             socketViewModel.myName = data.user?.name ?: "Me"
@@ -181,41 +183,32 @@ class MainFragment : Fragment() {
                             socketViewModel.amICreator = true
                             progressDialog.dismiss()
 
-//                            ((activity as HomeActivity).supportFragmentManager.findFragmentById(R.id.fragmentContainerView) as NavHostFragment)
-//                                .navController.navigate(R.id.action_mainFragment_to_playerFragment)
                             Navigation.findNavController(view)
                                 .navigate(R.id.action_mainFragment_to_playerFragment)
                         }
-                        "join-room" -> {
+                        "get-room" -> {
                             progressDialog.dismiss()
                             if (data.err == true) {
-                                Snackbar.make(binding.root, data.message, Snackbar.LENGTH_LONG)
+                                Snackbar.make(binding.bannerAd, data.message, Snackbar.LENGTH_LONG)
                                     .show()
                             } else {
                                 socketViewModel.videoInRoom = Video(
                                     0, title = data.message,
                                     duration = data.info,
-                                    path = "",
-                                    isPlaying = data.isVideoPlaying,
-                                    currentTime = data.currentTime
+                                    path = ""
                                 )
-                                socketViewModel.myName = data.user?.name ?: "Me"
-                                socketViewModel.nUsers = data.nUsers ?: 0
                                 socketViewModel.roomCode = data.roomCode
-
 
                                 ((activity as HomeActivity).supportFragmentManager.findFragmentById(
                                     R.id.fragmentContainerView
                                 ) as NavHostFragment)
                                     .navController.navigate(R.id.action_mainFragment_to_fileManagerFragment)
-
-//                            Navigation.findNavController(view)
-//                                .navigate(R.id.action_mainFragment_to_fileManagerFragment)
-
                             }
                         }
                         "error" -> {
                             Log.e("SocketViewModel", "$data")
+                            progressDialog.dismiss()
+                            Snackbar.make(binding.bannerAd, data.message, Snackbar.LENGTH_SHORT).show()
                         }
                         else -> {
                             Log.e("MainFragment", "Invalid channel data=$data")
@@ -223,54 +216,6 @@ class MainFragment : Fragment() {
                     }
             }
         }
-
-        /*lifecycleScope.launchWhenCreated {
-            socketViewModel.dataRes.collect { data ->
-                Log.e("MainFragment", "Data incoming: $data")
-                if (socketViewModel.myName == "Me" && this@MainFragment.isVisible) {
-                    when (data.channel) {
-                        "create-room" -> {
-                            socketViewModel.myName = data.user?.name ?: "Me"
-                            socketViewModel.nUsers = data.nUsers ?: 0
-                            socketViewModel.roomCode = data.roomCode
-                            socketViewModel.amICreator = true
-                            progressDialog.dismiss()
-
-                            ((activity as HomeActivity).supportFragmentManager.findFragmentById(R.id.fragmentContainerView) as NavHostFragment)
-                                .navController.navigate(R.id.action_mainFragment_to_playerFragment)
-//                            Navigation.findNavController(view)
-//                                .navigate(R.id.action_mainFragment_to_playerFragment)
-                        }
-                        "join-room" -> {
-                            progressDialog.dismiss()
-                            if (data.err == true) {
-                                Snackbar.make(binding.root, data.message, Snackbar.LENGTH_LONG)
-                                    .show()
-                            } else {
-                                socketViewModel.videoInRoom = Video(
-                                    0, title = data.message,
-                                    duration = data.info,
-                                    path = "",
-                                    isPlaying = data.isVideoPlaying,
-                                    currentTime = data.currentTime
-                                )
-                                socketViewModel.myName = data.user?.name ?: "Me"
-                                socketViewModel.nUsers = data.nUsers ?: 0
-                                socketViewModel.roomCode = data.roomCode
-                                Navigation.findNavController(view)
-                                    .navigate(R.id.action_mainFragment_to_fileManagerFragment)
-                            }
-                        }
-                        "error" -> {
-                            Log.e("SocketViewModel", "$data")
-                        }
-                        else -> {
-                            Log.e("MainFragment", "Invalid channel data=$data")
-                        }
-                    }
-                }
-            }
-        }*/
     }
 
     private fun convertMillisToTimeFormat(millis: Long): String {
@@ -285,5 +230,6 @@ class MainFragment : Fragment() {
         cursor?.close()
         _binding = null
         socketResponseJob?.cancel()
+        socketResponseJob = null
     }
 }

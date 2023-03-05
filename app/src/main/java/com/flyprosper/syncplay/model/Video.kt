@@ -5,6 +5,6 @@ data class Video(
     val title: String,
     val duration: String?,
     val path: String,
-    val isPlaying: Boolean? = null,
-    var currentTime: Int? = null
+    var isPlaying: Boolean? = null,
+    var currentTime: Long? = null
 )

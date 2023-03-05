@@ -13,5 +13,5 @@ data class MessageData(
     val info: String? = null,
     val nUsers: Int? = null,
     val isVideoPlaying: Boolean? = null,
-    val currentTime: Int? = null
+    val currentTime: Long? = null
 )
