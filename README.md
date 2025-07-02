@@ -1,5 +1,7 @@
 # Syncplay
 
+<img src="https://github.com/costomato/SyncPlay/blob/main/app/src/debug/ic_launcher-playstore.png" width="150px">
+
 ## About
 Syncplay is an android app that allows friends to watch videos or movies together in real-time. With Syncplay, everyone can synchronize the video playback without worrying about connecting over a video call and one person having to stream the entire movie. This improves the overall viewing experience for everyone.
 
